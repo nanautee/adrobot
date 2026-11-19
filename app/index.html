@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="ru"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Adrobot — Keitaro</title>
+<style>
+:root{font:16px system-ui;color:#e8edf8;background:#101522}body{max-width:1000px;margin:50px auto;padding:0 24px}header{display:flex;align-items:center;justify-content:space-between}h1{font-size:32px;letter-spacing:-1px}small,p{color:#a4b1c9}section{background:#1a2335;border:1px solid #303d55;border-radius:18px;padding:26px;margin:24px 0}h2{margin-top:0;font-size:21px}form{display:grid;grid-template-columns:1fr 1fr;gap:18px}label{display:grid;gap:8px;font-size:14px}input,select,button{font:inherit;border-radius:8px;padding:11px;border:1px solid #45536e;background:#111b2d;color:inherit;min-width:0}button{cursor:pointer;background:#6f66ec;border:0;font-weight:600}button:disabled{opacity:.45;cursor:wait}.secondary{background:#34425c}#status{white-space:pre-wrap;padding:14px;border-radius:8px;background:#111b2d}table{width:100%;border-collapse:collapse;margin:18px 0}td,th{padding:12px;text-align:left;border-bottom:1px solid #34425c}.row{display:flex;gap:12px;margin:16px 0}.row select{flex:1}a{color:#b6b0ff}.tag{font-size:12px;border:1px solid #45536e;border-radius:20px;padding:7px 12px}@media(max-width:600px){form{grid-template-columns:1fr}.row{flex-wrap:wrap}}
+</style>
+<style>
+:root{font:14px Arial,Helvetica,sans-serif;color:#171717;background:#fff;font-weight:400;color-scheme:light}
+body{max-width:960px;margin:56px auto;padding:0 28px}
+header{align-items:flex-start;border-bottom:1px solid #e8e8e8;padding-bottom:24px}
+h1{font-size:28px;font-weight:400;letter-spacing:-.7px;margin:12px 0 0}
+small,p{color:#737373;font-weight:400;line-height:1.6}
+small{font-size:10px;letter-spacing:1.5px}
+section{background:#fff;border:1px solid #e5e5e5;border-radius:2px;padding:28px;margin:28px 0}
+h2{font-size:18px;font-weight:400;letter-spacing:-.3px;margin-bottom:24px}
+label{font-size:12px;color:#555;gap:9px}
+input,select,button{font:14px Arial,Helvetica,sans-serif;border-radius:2px;padding:11px 12px;border:1px solid #d8d8d8;background:#fff;color:#171717;font-weight:400}
+input:focus,select:focus{outline:1px solid #171717;outline-offset:1px}
+button{background:#171717;color:#fff;border-color:#171717;font-weight:400;transition:background .15s}
+button:hover{background:#333}
+button:focus-visible,a:focus-visible{outline:2px solid #777;outline-offset:3px}
+button:disabled{opacity:.4}
+.secondary{background:#fff;color:#171717;border:1px solid #d8d8d8}
+.secondary:hover{background:#f5f5f5}
+#status{padding:13px 16px;border:1px solid #e8e8e8;border-radius:2px;background:#fafafa;color:#555;line-height:1.5;margin-top:24px}
+td,th{padding:13px 8px;border-bottom:1px solid #e8e8e8;font-weight:400;font-size:13px}
+th{color:#777;font-size:12px}
+a{color:#171717;text-decoration:none}
+a:hover{text-decoration:underline}
+.tag{font-size:11px;border:1px solid #dedede;border-radius:2px;padding:8px 12px;white-space:nowrap}
+section>p{font-size:12px;margin-bottom:0}
+@media(max-width:600px){body{margin:28px auto;padding:0 16px}section{padding:20px}h1{font-size:23px}header{gap:16px}.row select{flex-basis:100%}}
+</style>
+<header><div><small>ADROBOT / TEST ASSIGNMENT</small><h1>Управление кампаниями</h1></div><a href="/docs" class="tag">API ↗</a></header>
+<p>Keitaro — источник актуальных данных. Изменения применяются непосредственно в трекере.</p>
+<div id="status" role="status">Загрузка справочников…</div>
+<section><h2>01 · Создать кампанию</h2><form id="create">
+<label>Название<input name="name" required maxlength="200" value="test_sadilov_campaign1" placeholder="test_sadilov_campaign1"></label>
+<label>Код страны<input name="country" required pattern="[A-Za-z]{2}" maxlength="2" placeholder="DE"></label>
+<label>Оффер<select name="offer_id" id="offers" required></select></label>
+<label>Домен<select name="domain_id" id="domains" required></select></label>
+<label>Группа<select name="group_id" id="groups" required></select></label>
+<label>Источник<select name="traffic_source_id" id="traffic_sources" required></select></label>
+<button>Создать кампанию</button></form><p>Первый поток: выбранная страна → Google. Второй: остальные посетители → оффер.</p></section>
+<section><h2>02 · Редактировать офферы</h2><div class="row"><select id="campaigns" aria-label="Кампания"></select><button id="load" class="secondary">Открыть</button><button id="refresh" class="secondary">Обновить</button></div>
+<label>Поток<select id="streams"></select></label><div id="table"></div>
+<div class="row"><select id="newOffer" aria-label="Добавляемый оффер"></select><button id="add">Добавить оффер</button></div>
+<p>После добавления или удаления доли распределяются поровну, сумма — ровно 100%. Последний оффер удалить нельзя. Потоки с выключенными офферами защищены от изменений.</p></section>
+<script>
+const $=id=>document.getElementById(id); let streams=[],offers=[];
+async function api(path,method='GET',body){const r=await fetch('/api/'+path,{method,headers:{'Content-Type':'application/json'},body:body?JSON.stringify(body):undefined});const data=await r.json();if(!r.ok)throw Error(typeof data.detail==='string'?data.detail:JSON.stringify(data.detail));return data}
+function status(text){$('status').textContent=text}
+function options(el,items){el.replaceChildren(new Option('Выберите…',''),...items.filter(x=>x.state!=='deleted').map(x=>new Option(`#${x.id} · ${x.name||x.domain||x.id}`,x.id)))}
+async function run(fn){document.querySelectorAll('button').forEach(b=>b.disabled=true);try{await fn()}catch(e){status(e.message)}finally{document.querySelectorAll('button').forEach(b=>b.disabled=false)}}
+async function catalogs(){await Promise.all(['offers','domains','groups','traffic_sources','campaigns'].map(async key=>{const data=await api('catalog/'+key);if(!Array.isArray(data))throw Error('Неожиданный формат справочника '+key);options($(key),data);if(key==='offers'){offers=data;options($('newOffer'),data)}}));status('Справочники загружены.')}
+async function load(){if(!$('campaigns').value)throw Error('Выберите кампанию');streams=await api(`campaigns/${$('campaigns').value}/streams`);options($('streams'),streams.filter(s=>s.schema==='landings'&&s.state!=='deleted'));$('streams').selectedIndex=$('streams').options.length>1?1:0;render();status('Потоки загружены из Keitaro.')}
+function render(){const s=streams.find(x=>String(x.id)===$('streams').value);const root=$('table');root.replaceChildren();if(!s){root.textContent='В кампании нет доступных офферных потоков.';return}const table=document.createElement('table');const header=table.insertRow();['Оффер','Доля','Состояние',''].forEach(t=>{const c=document.createElement('th');c.textContent=t;header.append(c)});for(const o of s.offers||[]){const row=table.insertRow();const name=offers.find(x=>x.id===o.offer_id)?.name||'';[`${o.offer_id} · ${name}`,`${o.share}%`,o.state||'active'].forEach(t=>row.insertCell().textContent=t);const b=document.createElement('button');b.textContent='Удалить';b.className='secondary';b.onclick=()=>run(async()=>{if(!confirm('Удалить оффер из потока и пересчитать доли?'))return;await api(`campaigns/${$('campaigns').value}/streams/${s.id}/offers/${o.offer_id}`,'DELETE');await load();status('Оффер удалён. Доли перечитаны из Keitaro.')});row.insertCell().append(b)}root.append(table);const total=document.createElement('p');total.textContent=`Офферов: ${(s.offers||[]).length} · Сумма долей: ${(s.offers||[]).reduce((a,o)=>a+Number(o.share),0)}%`;root.append(total)}
+$('create').onsubmit=e=>{e.preventDefault();run(async()=>{const data=Object.fromEntries(new FormData(e.target));for(const k of ['offer_id','domain_id','group_id','traffic_source_id'])data[k]=Number(data[k]);const c=await api('campaigns','POST',data);await catalogs();$('campaigns').value=c.id;await load();status(`Кампания #${c.id} создана и включена.`)})};
+$('load').onclick=()=>run(load);$('refresh').onclick=()=>run(catalogs);$('streams').onchange=render;
+$('add').onclick=()=>run(async()=>{if(!$('streams').value||!$('newOffer').value)throw Error('Выберите поток и оффер');await api(`campaigns/${$('campaigns').value}/streams/${$('streams').value}/offers`,'POST',{offer_id:Number($('newOffer').value)});await load();status('Оффер добавлен. Доли перечитаны из Keitaro.')});run(catalogs);
+</script></html>

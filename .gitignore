@@ -1,0 +1,8 @@
+.env.local
+.env
+.venv/
+__pycache__/
+.pytest_cache/
+*.db
+*.egg-info/
+LIVE_CHECK.json
